@@ -3,7 +3,7 @@ use std::error;
 use std::fs;
 use std::fmt;
 use std::io;
-use flate2::read::GzDecoder;
+use flate2::read::ZlibDecoder;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Error {
@@ -27,15 +27,16 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {}
 
-fn init() -> Result<String, io::Error> {
+fn init() -> Result<(), io::Error> {
     fs::create_dir(".git")?;
     fs::create_dir(".git/objects")?;
     fs::create_dir(".git/refs")?;
     fs::write(".git/HEAD", "ref: refs/heads/main\n")?;
-    Ok("Initialized git directory".to_string())
+    println!("Initialized git directory");
+    Ok(())
 }
 
-fn unknown_command(command: &str) -> Result<String, Error> {
+fn unknown_command(command: &str) -> Result<(), Error> {
     Err(Error::UnknownCommand(command.to_string()))
 }
 
@@ -50,7 +51,7 @@ fn parse_blob<R: io::Read>(blob: Option<R>) -> Result<String, Error> {
 
     let mut content = String::new();
     blob.read_to_string(&mut content).map_err(|_|Error::MalformedObject)?;
-    let (size, content) = content.trim_start().split_once("\0").ok_or(Error::MalformedObject)?;
+    let (size, content) = content.trim_start().split_once('\0').ok_or(Error::MalformedObject)?;
     if size.to_string().parse::<u8>().is_err() {
         return Err(Error::MalformedObject);
     }
@@ -65,27 +66,23 @@ fn parse_object_path_from_hash(hash: &str) -> Result<String, Error> {
     Err(Error::InvalidObjectHash(hash.to_string()))
 }
 
-fn cat_file(hash: &str) -> Result<String, Error> {
+fn cat_file(hash: &str) -> Result<(), Error> {
     let path = parse_object_path_from_hash(hash)?;
-    let blob = fs::File::open(path).map(GzDecoder::new).ok();
-    parse_blob(blob)
+    let blob = fs::File::open(path).map(ZlibDecoder::new).ok();
+    let content = parse_blob(blob)?;
+    print!("{content}");
+    Ok(())
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let response: Result<String, Box<dyn error::Error>>  = match args[1].as_str() {
-        "init" => init().map_err(|err|Box::new(err) as Box<dyn error::Error>),
-        "cat-file" => cat_file(&args[2]).map_err(|err|Box::new(err) as Box<dyn error::Error>),
-        _ => unknown_command(&args[1]).map_err(|err|Box::new(err) as Box<dyn error::Error>)
-    };
 
-    match response {
-        Ok(response) => {
-            println!("{response}");
-        },
-        Err(error) => {
-            println!("{error}");
-        }
+    if let Err(err)  = match args[1].as_str() {
+        "init" => init().map_err(|err|Box::new(err) as Box<dyn error::Error>),
+        "cat-file" => cat_file(&args[3]).map_err(|err|Box::new(err) as Box<dyn error::Error>),
+        _ => unknown_command(&args[1]).map_err(|err|Box::new(err) as Box<dyn error::Error>)
+    } {
+        println!("{err}");
     }
 }
 
