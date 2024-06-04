@@ -1,27 +1,17 @@
-use std::error;
 use std::fs;
-use std::fmt;
 use std::io;
 use flate2::read::ZlibDecoder;
+use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum Error {
+    #[error("malformed git object")]
     MalformedObject,
+    #[error("git object not found")]
     ObjectNotFound,
+    #[error("invalid object hash: {0}")]
     InvalidObjectHash(String),
 }
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            Error::MalformedObject => write!(f, "malformed git object"),
-            Error::ObjectNotFound => write!(f, "git object not found"),
-            Error::InvalidObjectHash(hash) => write!(f, "invalid object hash: {hash}"),
-        }
-    }
-}
-
-impl error::Error for Error {}
 
 fn parse_blob<R: io::Read>(blob: Option<R>) -> Result<String, Error> {
     let mut blob = blob.ok_or(Error::ObjectNotFound)?;
