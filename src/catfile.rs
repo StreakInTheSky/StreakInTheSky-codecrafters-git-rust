@@ -49,7 +49,7 @@ fn parse_object_path_from_hash(hash: &str) -> Result<String, Error> {
     Err(Error::InvalidObjectHash(hash.to_string()))
 }
 
-pub fn cat_file(hash: &str) -> Result<(), Error> {
+pub fn cat_file(hash: &str) -> anyhow::Result<()> {
     let path = parse_object_path_from_hash(hash)?;
     let blob = fs::File::open(path).map(ZlibDecoder::new).ok();
     let content = parse_blob(blob)?;
