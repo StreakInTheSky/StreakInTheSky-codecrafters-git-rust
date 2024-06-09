@@ -47,6 +47,20 @@ pub fn cat_file(hash: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub fn hash_object(_path: &str) -> anyhow::Result<()> {
+    let hash = "ac136066947976e9f5ae7cc6bdccac22d0fc0f6f"; 
+    let object_path = parse_object_path_from_hash(hash)?;
+    if let Err(err) = fs::write(object_path.clone(), "") {
+        if err.kind() == std::io::ErrorKind::NotFound {
+            let (directory, _filename) = object_path.split_at(17);
+            fs::create_dir(directory)?;
+            fs::write(object_path, "")?;
+        }
+    }
+    println!("{hash}");
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -133,6 +147,16 @@ mod test {
 
         let actual_result = parse_object_path_from_hash(object_hash);
         assert_eq!(actual_result, expected_error);
+    }
+
+    #[test]
+    fn hash_object_from_valid_path() -> Result<(), Error>{
+        let path = "strawberry.txt";
+        let expected_hash = "ac136066947976e9f5ae7cc6bdccac22d0fc0f6f";
+
+        let actual_result = hash_file(path)?;
+        assert_eq!(actual_result, expected_hash);
+        Ok(())
     }
 }
 

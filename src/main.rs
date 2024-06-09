@@ -1,4 +1,4 @@
-use std::env;
+#![allow(dead_code)]
 use std::fs;
 use anyhow::anyhow;
 use thiserror::Error;
@@ -26,7 +26,12 @@ enum Commands {
         #[arg(short = 'p')]
         pretty: Option<bool>,
         hash: String,
-    }
+    },
+    HashObject {
+        #[arg(short, long)]
+        write: bool,
+        path: String,
+    },
 }
 
 
@@ -49,19 +54,10 @@ fn main() {
     if let Err(err) = match &cli.command {
         Commands::Init => init(),
         Commands::CatFile{ hash, .. } => catfile::cat_file(hash),
+        Commands::HashObject{ path, .. } => catfile::hash_object(path)
     } {
         println!("{err}");
     }
-
-//    let args: Vec<String> = env::args().collect();
-//
-//    if let Err(err) = match args[1].as_str() {
-//        "init" => init(),
-//        "cat-file" => catfile::cat_file(&args[3]),
-//        _ => unknown_command(&args[1]),
-//    } {
-//        println!("{err}");
-//    }
 }
 
 #[cfg(test)]
